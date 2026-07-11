@@ -38,9 +38,11 @@ final class AppState: ObservableObject {
         }
     }
 
-    func pushToSelectedDevice(_ urls: [URL]) {
+    @discardableResult
+    func pushToSelectedDevice(_ urls: [URL]) -> Bool {
         guard let deviceStore, let transferQueue,
-              let serial = deviceStore.selectedDevice?.serial else { return }
+              let serial = deviceStore.selectedDevice?.serial else { return false }
         transferQueue.enqueuePush(files: urls, remoteDir: settings.deviceDestPath, serial: serial)
+        return true
     }
 }

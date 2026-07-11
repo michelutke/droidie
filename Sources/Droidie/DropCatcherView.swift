@@ -3,7 +3,7 @@ import AppKit
 /// Transparent view layered over the status item button: forwards clicks, accepts file drops.
 final class DropCatcherView: NSView {
     var onClick: (() -> Void)?
-    var onFiles: (([URL]) -> Void)?
+    var onFiles: (([URL]) -> Bool)?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -22,7 +22,6 @@ final class DropCatcherView: NSView {
         let urls = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self],
                                                          options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
         guard !urls.isEmpty else { return false }
-        onFiles?(urls)
-        return true
+        return onFiles?(urls) ?? false
     }
 }

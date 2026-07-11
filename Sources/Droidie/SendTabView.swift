@@ -44,7 +44,7 @@ struct SendTabView: View {
         for provider in providers {
             _ = provider.loadObject(ofClass: URL.self) { url, _ in
                 guard let url else { return }
-                Task { @MainActor in appState.pushToSelectedDevice([url]) }
+                Task { @MainActor in _ = appState.pushToSelectedDevice([url]) }
             }
         }
         return !providers.isEmpty

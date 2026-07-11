@@ -25,7 +25,7 @@ final class StatusItemController {
             let catcher = DropCatcherView(frame: button.bounds)
             catcher.autoresizingMask = [.width, .height]
             catcher.onClick = { [weak self] in self?.togglePopover() }
-            catcher.onFiles = { [weak self] urls in self?.appState.pushToSelectedDevice(urls); _ = self }
+            catcher.onFiles = { [weak self] urls in self?.appState.pushToSelectedDevice(urls) ?? false }
             button.addSubview(catcher)
         }
 
