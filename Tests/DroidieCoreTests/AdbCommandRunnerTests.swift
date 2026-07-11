@@ -45,4 +45,26 @@ final class AdbCommandRunnerTests: XCTestCase {
         _ = try? await task.value
         XCTAssertLessThan(Date().timeIntervalSince(start), 5)
     }
+
+    func test_run_largeStderr_doesNotHang() async throws {
+        let adb = try makeFakeAdb("head -c 131072 /dev/zero | tr '\\0' 'e' >&2; exit 0")
+        let result = try await AdbCommandRunner(adbPath: adb).run(["push"], onOutput: nil)
+        XCTAssertEqual(result.exitCode, 0)
+        XCTAssertGreaterThanOrEqual(result.stderr.count, 131_072)
+    }
+
+    func test_run_preCancelledTask_doesNotCrash() async throws {
+        let adb = try makeFakeAdb("sleep 5")
+        let task = Task {
+            try await AdbCommandRunner(adbPath: adb).run(["push"], onOutput: nil)
+        }
+        task.cancel()
+        do {
+            _ = try await task.value
+        } catch is CancellationError {
+            // Expected outcome: cancelled before or during launch.
+        } catch {
+            // Also acceptable: process launched and was terminated, surfacing a non-zero exit.
+        }
+    }
 }

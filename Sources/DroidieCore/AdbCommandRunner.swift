@@ -50,27 +50,86 @@ public final class AdbCommandRunner: AdbRunning {
             onOutput?(text)
         }
 
+        let stderrCollector = Collector()
+        errPipe.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            guard !data.isEmpty, let text = String(data: data, encoding: .utf8) else { return }
+            stderrCollector.append(text)
+        }
+
+        let launchState = LaunchState()
+
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 process.terminationHandler = { proc in
                     outPipe.fileHandleForReading.readabilityHandler = nil
-                    let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
+                    errPipe.fileHandleForReading.readabilityHandler = nil
                     continuation.resume(returning: AdbResult(
                         exitCode: proc.terminationStatus,
                         stdout: stdoutCollector.joined(),
-                        stderr: String(data: errData, encoding: .utf8) ?? ""
+                        stderr: stderrCollector.joined()
                     ))
+                }
+                guard launchState.beginLaunch() else {
+                    process.terminationHandler = nil
+                    outPipe.fileHandleForReading.readabilityHandler = nil
+                    errPipe.fileHandleForReading.readabilityHandler = nil
+                    continuation.resume(throwing: CancellationError())
+                    return
                 }
                 do {
                     try process.run()
+                    launchState.endLaunch(process)
                 } catch {
                     process.terminationHandler = nil
+                    outPipe.fileHandleForReading.readabilityHandler = nil
+                    errPipe.fileHandleForReading.readabilityHandler = nil
                     continuation.resume(throwing: error)
                 }
             }
         } onCancel: {
-            process.terminate()
+            launchState.cancel(process)
         }
+    }
+}
+
+/// Tracks process launch state so cancellation never races `Process.run()`.
+private final class LaunchState: @unchecked Sendable {
+    private enum State {
+        case notStarted
+        case launched
+        case cancelled
+    }
+
+    private let lock = NSLock()
+    private var state: State = .notStarted
+
+    /// Called just before invoking `process.run()`. Returns false if cancellation
+    /// already happened, meaning the caller must not launch the process.
+    func beginLaunch() -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        return state != .cancelled
+    }
+
+    /// Called immediately after a successful `process.run()`. If cancellation
+    /// raced in while the process was launching, terminates it now.
+    func endLaunch(_ process: Process) {
+        lock.lock()
+        let wasCancelled = state == .cancelled
+        if !wasCancelled { state = .launched }
+        lock.unlock()
+        if wasCancelled { process.terminate() }
+    }
+
+    /// Called from the cancellation handler. Terminates immediately if the
+    /// process is already launched; otherwise records the cancellation so
+    /// `beginLaunch()`/`endLaunch()` can react appropriately.
+    func cancel(_ process: Process) {
+        lock.lock()
+        let wasLaunched = state == .launched
+        state = .cancelled
+        lock.unlock()
+        if wasLaunched { process.terminate() }
     }
 }
 
