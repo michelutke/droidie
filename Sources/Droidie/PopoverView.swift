@@ -16,7 +16,10 @@ struct PopoverView: View {
                 }
                 Divider()
                 TabView {
-                    Text("Send — Task 15").tabItem { Text("Send") }
+                    if let transferQueue = appState.transferQueue {
+                        SendTabView(appState: appState, transferQueue: transferQueue)
+                            .tabItem { Text("Send") }
+                    }
                     Text("Browse — Task 16").tabItem { Text("Browse") }
                 }
                 Divider()
