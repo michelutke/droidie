@@ -13,6 +13,7 @@ struct BrowseTabView: View {
     @State private var loading = false
     @State private var errorText: String?
     @State private var dropActive = false
+    @State private var loadGeneration = 0
 
     var body: some View {
         VStack(spacing: 8) {
@@ -21,7 +22,10 @@ struct BrowseTabView: View {
                     .disabled(path == "/")
                 Text(path).font(.caption).lineLimit(1).truncationMode(.head)
                 Spacer()
-                Button { Task { await load() } } label: { Image(systemName: "arrow.clockwise") }
+                Button {
+                    selection.removeAll()
+                    Task { await load() }
+                } label: { Image(systemName: "arrow.clockwise") }
             }
 
             if let errorText {
@@ -58,7 +62,11 @@ struct BrowseTabView: View {
         }
         .padding(8)
         .task { await load() }
-        .onChange(of: deviceStore.selectedSerial) { _, _ in Task { await load() } }
+        .onChange(of: deviceStore.selectedSerial) { _, _ in
+            selection.removeAll()
+            path = "/sdcard"
+            Task { await load() }
+        }
     }
 
     private func navigateUp() {
@@ -69,7 +77,10 @@ struct BrowseTabView: View {
     }
 
     private func load() async {
+        loadGeneration += 1
+        let generation = loadGeneration
         guard let runner = appState.runner, let serial = deviceStore.selectedDevice?.serial else {
+            guard generation == loadGeneration else { return }
             entries = []
             return
         }
@@ -79,12 +90,14 @@ struct BrowseTabView: View {
         do {
             let result = try await runner.run(["-s", serial, "shell", "ls", "-la", RemotePath.quoted(path)],
                                               onOutput: nil)
+            guard generation == loadGeneration else { return }
             if result.exitCode == 0 {
                 entries = LsParser.parse(result.stdout)
             } else {
                 errorText = result.stderr.isEmpty ? result.stdout : result.stderr
             }
         } catch {
+            guard generation == loadGeneration else { return }
             errorText = error.localizedDescription
         }
     }
