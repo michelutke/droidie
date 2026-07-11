@@ -3,12 +3,11 @@ import DroidieCore
 
 struct PopoverView: View {
     @ObservedObject var appState: AppState
+    @State private var showSettings = false
 
     var body: some View {
         if appState.adbPath == nil {
-            Text("adb not found — onboarding comes in Task 17")
-                .padding()
-                .frame(width: 380, height: 480)
+            OnboardingView(appState: appState)
         } else {
             VStack(spacing: 0) {
                 if let deviceStore = appState.deviceStore {
@@ -29,6 +28,10 @@ struct PopoverView: View {
                 HStack {
                     Spacer()
                     Button {
+                        showSettings = true
+                    } label: { Image(systemName: "gearshape") }
+                    .buttonStyle(.plain)
+                    Button {
                         NSApplication.shared.terminate(nil)
                     } label: { Image(systemName: "power") }
                     .buttonStyle(.plain)
@@ -36,6 +39,7 @@ struct PopoverView: View {
                 .padding(8)
             }
             .frame(width: 380, height: 480)
+            .sheet(isPresented: $showSettings) { SettingsSheetView(appState: appState) }
         }
     }
 }
