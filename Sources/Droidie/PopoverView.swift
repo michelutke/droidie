@@ -11,7 +11,9 @@ struct PopoverView: View {
                 .frame(width: 380, height: 480)
         } else {
             VStack(spacing: 0) {
-                Text("device row — Task 14").padding(8)
+                if let deviceStore = appState.deviceStore {
+                    DeviceRowView(deviceStore: deviceStore)
+                }
                 Divider()
                 TabView {
                     Text("Send — Task 15").tabItem { Text("Send") }
