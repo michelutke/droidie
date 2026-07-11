@@ -53,6 +53,15 @@ final class AdbCommandRunnerTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(result.stderr.count, 131_072)
     }
 
+    func test_run_multiByteCharacterAcrossChunkBoundary_isPreserved() async throws {
+        let adb = try makeFakeAdb(
+            "printf 'a%.0s' $(seq 1 100000); printf '\\303\\274'; printf 'b%.0s' $(seq 1 100000)"
+        )
+        let result = try await AdbCommandRunner(adbPath: adb).run(["push"], onOutput: nil)
+        XCTAssertTrue(result.stdout.contains("ü"))
+        XCTAssertEqual(result.stdout.unicodeScalars.count, 200_001)
+    }
+
     func test_run_preCancelledTask_doesNotCrash() async throws {
         let adb = try makeFakeAdb("sleep 5")
         let task = Task {

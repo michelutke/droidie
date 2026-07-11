@@ -42,19 +42,25 @@ public final class AdbCommandRunner: AdbRunning {
         process.standardOutput = outPipe
         process.standardError = errPipe
 
-        let stdoutCollector = Collector()
+        let stdoutCollector = DataCollector()
         outPipe.fileHandleForReading.readabilityHandler = { handle in
             let data = handle.availableData
-            guard !data.isEmpty, let text = String(data: data, encoding: .utf8) else { return }
-            stdoutCollector.append(text)
-            onOutput?(text)
+            guard !data.isEmpty else { return }
+            stdoutCollector.append(data)
+            // Best-effort decode of this chunk for progress callbacks; a failed decode
+            // (e.g. a multi-byte UTF-8 character split across chunk boundaries) just
+            // skips the callback for this chunk — the raw bytes are still retained in
+            // stdoutCollector and decoded in full once the process finishes.
+            if let text = String(data: data, encoding: .utf8) {
+                onOutput?(text)
+            }
         }
 
-        let stderrCollector = Collector()
+        let stderrCollector = DataCollector()
         errPipe.fileHandleForReading.readabilityHandler = { handle in
             let data = handle.availableData
-            guard !data.isEmpty, let text = String(data: data, encoding: .utf8) else { return }
-            stderrCollector.append(text)
+            guard !data.isEmpty else { return }
+            stderrCollector.append(data)
         }
 
         let launchState = LaunchState()
@@ -64,10 +70,19 @@ public final class AdbCommandRunner: AdbRunning {
                 process.terminationHandler = { proc in
                     outPipe.fileHandleForReading.readabilityHandler = nil
                     errPipe.fileHandleForReading.readabilityHandler = nil
+                    // The readabilityHandler gives no guarantee that the final buffered
+                    // pipe data was delivered before the process exits, so drain any
+                    // remainder directly from the file handles.
+                    if let remainder = try? outPipe.fileHandleForReading.readToEnd(), !remainder.isEmpty {
+                        stdoutCollector.append(remainder)
+                    }
+                    if let remainder = try? errPipe.fileHandleForReading.readToEnd(), !remainder.isEmpty {
+                        stderrCollector.append(remainder)
+                    }
                     continuation.resume(returning: AdbResult(
                         exitCode: proc.terminationStatus,
-                        stdout: stdoutCollector.joined(),
-                        stderr: stderrCollector.joined()
+                        stdout: stdoutCollector.decodedString(),
+                        stderr: stderrCollector.decodedString()
                     ))
                 }
                 guard launchState.beginLaunch() else {
@@ -143,4 +158,22 @@ final class Collector: @unchecked Sendable {
 
     /// Returns all collected chunks joined into one string.
     func joined() -> String { lock.lock(); defer { lock.unlock() }; return chunks.joined() }
+}
+
+/// Thread-safe raw byte collector for streamed pipe data. Collecting raw bytes rather
+/// than pre-decoded strings avoids dropping a chunk whose boundary splits a multi-byte
+/// UTF-8 character.
+final class DataCollector: @unchecked Sendable {
+    private let lock = NSLock()
+    private var data = Data()
+
+    /// Appends a chunk of raw bytes to the collection.
+    func append(_ chunk: Data) { lock.lock(); data.append(chunk); lock.unlock() }
+
+    /// Decodes all collected bytes as UTF-8, falling back to a lossy decode if the
+    /// full byte stream isn't valid UTF-8.
+    func decodedString() -> String {
+        lock.lock(); let snapshot = data; lock.unlock()
+        return String(data: snapshot, encoding: .utf8) ?? String(decoding: snapshot, as: UTF8.self)
+    }
 }
