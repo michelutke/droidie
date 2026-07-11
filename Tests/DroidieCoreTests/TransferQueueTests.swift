@@ -42,15 +42,14 @@ final class TransferQueueTests: XCTestCase {
         XCTAssertEqual(q.jobs.first?.status, .done)
     }
 
-    func test_push_mediaFile_triggersMediaScanBroadcast() async {
+    func test_push_mediaFile_triggersMediaScan() async {
         let runner = FakeRunner()
         let q = TransferQueue(runner: runner)
         q.enqueuePush(files: [URL(fileURLWithPath: "/tmp/pic.jpg")], remoteDir: "/sdcard/Download", serial: "SER")
         await drainQueue(q)
         XCTAssertEqual(runner.calls.count, 2)
-        XCTAssertEqual(runner.calls[1], ["-s", "SER", "shell", "am", "broadcast",
-                                         "-a", "android.intent.action.MEDIA_SCANNER_SCAN_FILE",
-                                         "-d", "'file:///sdcard/Download/pic.jpg'"])
+        XCTAssertEqual(runner.calls[1], ["-s", "SER", "shell", "cmd", "media", "scan",
+                                         "'/sdcard/Download/pic.jpg'"])
     }
 
     func test_push_textFile_noMediaScan() async {

@@ -54,7 +54,7 @@ Storage: UserDefaults only (settings + remembered IPs). No DB, no daemon, no cre
 
 - `adb -s <serial> push <local> <remote>/`; folder drop = one recursive push. Jobs run serially.
 - Progress from adb's `[ NN%]` stdout lines; if absent, indeterminate bar.
-- After push of media files (image/video/audio extensions): `adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file://<remote-path>`.
+- After push of media files (image/video/audio extensions): `adb shell cmd media scan <remote-path>`.
 - Remote paths quoted; spaces/unicode-safe.
 
 ## Error handling

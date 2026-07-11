@@ -167,9 +167,8 @@ public final class TransferQueue: ObservableObject {
         guard case .push(let local, let remoteDir) = job.kind,
               Self.mediaExtensions.contains(local.pathExtension.lowercased()) else { return }
         let remoteFile = RemotePath.join(remoteDir, local.lastPathComponent)
-        _ = try? await runner.run(["-s", job.serial, "shell", "am", "broadcast",
-                                   "-a", "android.intent.action.MEDIA_SCANNER_SCAN_FILE",
-                                   "-d", RemotePath.quoted("file://" + remoteFile)],
+        _ = try? await runner.run(["-s", job.serial, "shell", "cmd", "media", "scan",
+                                   RemotePath.quoted(remoteFile)],
                                   onOutput: nil)
     }
 
