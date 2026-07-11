@@ -12,6 +12,7 @@ public final class DeviceTracker: @unchecked Sendable {
     private var connection: NWConnection?
     private var decoder = AdbSocketFrameDecoder()
     private var sawOkay = false
+    private var handshakeBuffer = Data()
     private var stopped = false
     private let queue = DispatchQueue(label: "droidie.device-tracker")
 
@@ -25,6 +26,7 @@ public final class DeviceTracker: @unchecked Sendable {
         queue.async { [self] in
             stopped = false
             sawOkay = false
+            handshakeBuffer = Data()
             decoder = AdbSocketFrameDecoder()
             let conn = NWConnection(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: port)!, using: .tcp)
             connection = conn
@@ -36,6 +38,10 @@ public final class DeviceTracker: @unchecked Sendable {
                               completion: .contentProcessed { _ in })
                     self.receiveLoop(conn)
                 case .failed, .cancelled, .waiting:
+                    // Deliberate fail-fast: .waiting is retryable (e.g. adb server not yet up),
+                    // but the owner (DeviceStore) restarts tracking with `adb start-server` +
+                    // backoff on every disconnect, so treating .waiting the same as a hard
+                    // disconnect is the intended recovery path, not a bug.
                     self.disconnect()
                 default:
                     break
@@ -59,11 +65,13 @@ public final class DeviceTracker: @unchecked Sendable {
             guard let self, !self.stopped else { return }
             if var data, !data.isEmpty {
                 if !self.sawOkay {
-                    guard data.count >= 4 else { return self.receiveLoop(conn) }
-                    let status = String(data: data.prefix(4), encoding: .utf8)
+                    self.handshakeBuffer.append(data)
+                    guard self.handshakeBuffer.count >= 4 else { return self.receiveLoop(conn) }
+                    let status = String(data: self.handshakeBuffer.prefix(4), encoding: .utf8)
                     guard status == "OKAY" else { return self.disconnect() }
                     self.sawOkay = true
-                    data = data.dropFirst(4)
+                    data = self.handshakeBuffer.dropFirst(4)
+                    self.handshakeBuffer = Data()
                 }
                 for payload in self.decoder.feed(data) {
                     self.onDevices?(TrackDevicesParser.parse(payload))
