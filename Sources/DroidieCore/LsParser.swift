@@ -27,9 +27,16 @@ public enum LsParser {
             let parts = line.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
             // perms links owner group size date time name...
             guard parts.count >= 8, parts[0].count >= 10, "d-lbcsp".contains(parts[0].first!) else { return nil }
-            let name = parts[7...].joined(separator: " ")
+            var name = parts[7...].joined(separator: " ")
+            let isSymlink = parts[0].hasPrefix("l")
+            if isSymlink, let arrowRange = name.range(of: " -> ") {
+                name = String(name[name.startIndex..<arrowRange.lowerBound])
+            }
             guard name != ".", name != ".." else { return nil }
-            return RemoteEntry(name: name, isDirectory: parts[0].hasPrefix("d"), size: Int64(parts[4]) ?? 0)
+            // Treat symlinks as directories: on Android the common symlinks (/sdcard,
+            // /storage/self/primary) point to directories, so this lets navigation work.
+            let isDirectory = parts[0].hasPrefix("d") || isSymlink
+            return RemoteEntry(name: name, isDirectory: isDirectory, size: Int64(parts[4]) ?? 0)
         }
         return entries.sorted {
             if $0.isDirectory != $1.isDirectory { return $0.isDirectory }

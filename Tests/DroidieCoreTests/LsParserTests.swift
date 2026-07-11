@@ -30,4 +30,12 @@ final class LsParserTests: XCTestCase {
         XCTAssertEqual(LsParser.parse(""), [])
         XCTAssertEqual(LsParser.parse("ls: /nope: No such file or directory"), [])
     }
+
+    func test_parse_symlink_keepsNameBeforeArrow_andTreatsAsDirectory() {
+        let line = "lrwxrwxrwx 1 root root 21 2026-07-01 12:00 sdcard -> /storage/self/primary"
+        let entries = LsParser.parse(line)
+        XCTAssertEqual(entries.count, 1)
+        XCTAssertEqual(entries.first?.name, "sdcard")
+        XCTAssertEqual(entries.first?.isDirectory, true)
+    }
 }
