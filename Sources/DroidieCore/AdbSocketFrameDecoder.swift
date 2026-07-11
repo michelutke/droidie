@@ -12,15 +12,16 @@ public struct AdbSocketFrameDecoder {
         buffer.append(data)
         var frames: [String] = []
         while buffer.count >= 4 {
-            guard let lenStr = String(data: buffer.prefix(4), encoding: .utf8),
+            let start = buffer.startIndex
+            guard let lenStr = String(data: buffer[start..<(start + 4)], encoding: .utf8),
                   let len = Int(lenStr, radix: 16) else {
                 buffer.removeAll()
                 break
             }
             guard buffer.count >= 4 + len else { break }
-            let payload = buffer.subdata(in: 4..<(4 + len))
-            frames.append(String(data: payload, encoding: .utf8) ?? "")
-            buffer.removeFirst(4 + len)
+            let payloadStart = start + 4
+            frames.append(String(data: buffer[payloadStart..<(payloadStart + len)], encoding: .utf8) ?? "")
+            buffer = Data(buffer.dropFirst(4 + len))
         }
         return frames
     }
