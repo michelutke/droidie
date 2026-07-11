@@ -20,7 +20,10 @@ struct PopoverView: View {
                         SendTabView(appState: appState, transferQueue: transferQueue)
                             .tabItem { Text("Send") }
                     }
-                    Text("Browse — Task 16").tabItem { Text("Browse") }
+                    if let deviceStore = appState.deviceStore, let transferQueue = appState.transferQueue {
+                        BrowseTabView(appState: appState, deviceStore: deviceStore, transferQueue: transferQueue)
+                            .tabItem { Text("Browse") }
+                    }
                 }
                 Divider()
                 HStack {
