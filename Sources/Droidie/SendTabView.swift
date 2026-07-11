@@ -6,6 +6,7 @@ struct SendTabView: View {
     @ObservedObject var appState: AppState
     @ObservedObject var transferQueue: TransferQueue
     @State private var dropActive = false
+    @State private var autoClearTask: Task<Void, Never>?
 
     var body: some View {
         VStack(spacing: 8) {
@@ -56,8 +57,10 @@ struct SendTabView: View {
             return false
         }
         guard allFinished else { return }
-        Task {
+        autoClearTask?.cancel()
+        autoClearTask = Task {
             try? await Task.sleep(for: .seconds(10))
+            guard !Task.isCancelled else { return }
             transferQueue.clearFinished()
         }
     }
