@@ -26,8 +26,16 @@ public enum LsParser {
         let entries: [RemoteEntry] = output.split(separator: "\n").compactMap { line in
             let parts = line.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
             // perms links owner group size date time name...
-            guard parts.count >= 8, parts[0].count >= 10, "d-lbcsp".contains(parts[0].first!) else { return nil }
-            var name = parts[7...].joined(separator: " ")
+            // Char/block device lines (perm prefix "c"/"b") use "major, minor" in place of a
+            // single size column, shifting every field after it; skip them entirely since
+            // they're not useful in a file browser anyway.
+            guard parts.count >= 8, parts[0].count >= 10, "d-lsp".contains(parts[0].first!) else { return nil }
+            // Re-split the raw line with a capped split count so the name field (last)
+            // keeps its original internal spacing instead of collapsing consecutive
+            // spaces when rejoined from the fully-split `parts` array.
+            let nameParts = line.split(separator: " ", maxSplits: 7, omittingEmptySubsequences: true)
+            guard nameParts.count == 8 else { return nil }
+            var name = String(nameParts[7])
             let isSymlink = parts[0].hasPrefix("l")
             if isSymlink, let arrowRange = name.range(of: " -> ") {
                 name = String(name[name.startIndex..<arrowRange.lowerBound])

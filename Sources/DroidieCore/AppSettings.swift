@@ -11,19 +11,31 @@ public final class AppSettings {
 
     /// Destination path on Android device for transferred files.
     public var deviceDestPath: String {
-        get { defaults.string(forKey: "deviceDestPath") ?? "/storage/emulated/0/Download" }
+        get {
+            let stored = defaults.string(forKey: "deviceDestPath") ?? ""
+            let trimmed = stored.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? "/storage/emulated/0/Download" : stored
+        }
         set { defaults.set(newValue, forKey: "deviceDestPath") }
     }
 
     /// Directory on macOS where downloaded files are saved.
     public var macDownloadDir: String {
-        get { defaults.string(forKey: "macDownloadDir") ?? NSString("~/Downloads").expandingTildeInPath }
+        get {
+            let stored = defaults.string(forKey: "macDownloadDir") ?? ""
+            let trimmed = stored.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? NSString("~/Downloads").expandingTildeInPath : stored
+        }
         set { defaults.set(newValue, forKey: "macDownloadDir") }
     }
 
     /// Optional path override for adb binary location.
     public var adbPathOverride: String? {
-        get { defaults.string(forKey: "adbPathOverride") }
+        get {
+            let stored = defaults.string(forKey: "adbPathOverride") ?? ""
+            let trimmed = stored.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : stored
+        }
         set { defaults.set(newValue, forKey: "adbPathOverride") }
     }
 

@@ -18,6 +18,12 @@ final class DeviceStoreTests: XCTestCase {
         XCTAssertEqual(store.selectedSerial, "B")
     }
 
+    func test_apply_unauthorizedOnlyDevice_isSelectedAsFallback() {
+        let store = makeStore()
+        store.apply(devices: [Device(serial: "A", state: .unauthorized, model: nil)])
+        XCTAssertEqual(store.selectedSerial, "A")
+    }
+
     func test_apply_keepsSelectionIfStillPresent() {
         let store = makeStore()
         store.apply(devices: [Device(serial: "A", state: .device, model: nil),

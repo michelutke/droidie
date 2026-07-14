@@ -49,6 +49,10 @@ public final class TransferQueue: ObservableObject {
     private var isProcessing = false
     private var runningTask: (id: UUID, task: Task<Void, Never>)?
 
+    /// Checks whether a file exists at the given path. Overridable in tests to simulate
+    /// pre-existing local files without touching the real filesystem.
+    var fileExists: (String) -> Bool = { FileManager.default.fileExists(atPath: $0) }
+
     /// Creates a queue that dispatches adb commands through the given runner.
     public init(runner: AdbRunning) {
         self.runner = runner
@@ -132,7 +136,9 @@ public final class TransferQueue: ObservableObject {
         case .push(let local, let remoteDir):
             args = ["-s", job.serial, "push", local.path, remoteDir]
         case .pull(let remotePath, let localDir):
-            args = ["-s", job.serial, "pull", remotePath, localDir.path]
+            let name = remotePath.split(separator: "/").last.map(String.init) ?? remotePath
+            let destination = nonConflictingDestination(for: name, in: localDir)
+            args = ["-s", job.serial, "pull", remotePath, destination.path]
         }
 
         do {
@@ -172,6 +178,24 @@ public final class TransferQueue: ObservableObject {
                                    "--uri", "content://media/", "--method", "scan_file",
                                    "--arg", quoted],
                                   onOutput: nil)
+    }
+
+    /// Returns a destination file URL under `localDir` for `name`, appending " 2", " 3", ...
+    /// before the extension when a file already exists there, so a pull never clobbers an
+    /// existing local file.
+    private func nonConflictingDestination(for name: String, in localDir: URL) -> URL {
+        var candidate = localDir.appendingPathComponent(name)
+        guard fileExists(candidate.path) else { return candidate }
+
+        let ext = (name as NSString).pathExtension
+        let baseName = ext.isEmpty ? name : (name as NSString).deletingPathExtension
+        var counter = 2
+        repeat {
+            let candidateName = ext.isEmpty ? "\(baseName) \(counter)" : "\(baseName) \(counter).\(ext)"
+            candidate = localDir.appendingPathComponent(candidateName)
+            counter += 1
+        } while fileExists(candidate.path)
+        return candidate
     }
 
     private func setStatus(_ id: UUID, _ status: TransferStatus) {

@@ -23,6 +23,16 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(s.adbPathOverride, "/x/adb")
     }
 
+    func test_emptyStringPersisted_getterFallsBackToDefault() {
+        let s = freshSettings()
+        s.deviceDestPath = ""
+        XCTAssertEqual(s.deviceDestPath, "/storage/emulated/0/Download")
+        s.macDownloadDir = "   "
+        XCTAssertEqual(s.macDownloadDir, NSString("~/Downloads").expandingTildeInPath)
+        s.adbPathOverride = ""
+        XCTAssertNil(s.adbPathOverride)
+    }
+
     func test_rememberWifiEndpoint_dedupsMostRecentFirst() {
         let s = freshSettings()
         s.rememberWifiEndpoint("192.168.1.42:5555")

@@ -35,11 +35,13 @@ public final class DeviceStore: ObservableObject {
         tracker.start()
     }
 
-    /// Updates the device list and auto-selects the first `.device`-state device if the current selection is gone.
+    /// Updates the device list and auto-selects the first `.device`-state device if the current
+    /// selection is gone, falling back to the first device of any state (e.g. `.unauthorized`) so
+    /// the picker isn't left blank and the "confirm on phone" hint can show.
     public func apply(devices: [Device]) {
         self.devices = devices
         if selectedSerial == nil || !devices.contains(where: { $0.serial == selectedSerial }) {
-            selectedSerial = devices.first { $0.state == .device }?.serial
+            selectedSerial = (devices.first { $0.state == .device } ?? devices.first)?.serial
         }
     }
 

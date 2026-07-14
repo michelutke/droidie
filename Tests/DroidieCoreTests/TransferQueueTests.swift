@@ -79,7 +79,16 @@ final class TransferQueueTests: XCTestCase {
         let q = TransferQueue(runner: runner)
         q.enqueuePull(remotePaths: ["/sdcard/DCIM/x.jpg"], localDir: URL(fileURLWithPath: "/tmp"), serial: "SER")
         await drainQueue(q)
-        XCTAssertEqual(runner.calls.first, ["-s", "SER", "pull", "/sdcard/DCIM/x.jpg", "/tmp"])
+        XCTAssertEqual(runner.calls.first, ["-s", "SER", "pull", "/sdcard/DCIM/x.jpg", "/tmp/x.jpg"])
+    }
+
+    func test_pull_existingFile_targetsNonConflictingName() async {
+        let runner = FakeRunner()
+        let q = TransferQueue(runner: runner)
+        q.fileExists = { $0 == "/tmp/x.jpg" }
+        q.enqueuePull(remotePaths: ["/sdcard/DCIM/x.jpg"], localDir: URL(fileURLWithPath: "/tmp"), serial: "SER")
+        await drainQueue(q)
+        XCTAssertEqual(runner.calls.first, ["-s", "SER", "pull", "/sdcard/DCIM/x.jpg", "/tmp/x 2.jpg"])
     }
 
     func test_progress_updatesRunningPercent() async {
