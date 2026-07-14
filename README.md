@@ -6,7 +6,7 @@ macOS menu bar app for transferring files to/from Android devices over adb — U
 
 - Live device list (USB + WiFi) via adb track-devices
 - Drag & drop files onto the popover or the menu bar icon → push to device
-- Browse device storage and pull files to the Mac
+- Browse device storage and pull files to the Mac — or drag files straight out into Finder
 - In-app wireless-debugging pairing (IP:port + pairing code)
 - Transfer progress, media scan broadcast so photos/videos show up in the gallery
 

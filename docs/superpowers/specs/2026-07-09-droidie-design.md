@@ -75,4 +75,8 @@ Storage: UserDefaults only (settings + remembered IPs). No DB, no daemon, no cre
 
 ## Out of scope (v1)
 
-Thumbnails in browser, parallel multi-device transfers, APK install special-casing, auto-update, drag-out from Browse tab to Finder.
+Thumbnails in browser, parallel multi-device transfers, APK install special-casing, auto-update.
+
+## Post-v1 additions
+
+- Drag files out of the Browse tab into Finder: file-promise drag (`Transferable` + `FileRepresentation`), adb pull happens at drop time to a temp dir, Finder copies to the drop location. Files only, not folders.
