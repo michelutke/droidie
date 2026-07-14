@@ -6,7 +6,7 @@
 
 **Drag & drop file transfer between your Mac and Android — no cables required, no Android Studio.**
 
-[![CI](https://github.com/miggiman/droidie/actions/workflows/ci.yml/badge.svg)](https://github.com/miggiman/droidie/actions/workflows/ci.yml)
+[![CI](https://github.com/michelutke/droidie/actions/workflows/ci.yml/badge.svg)](https://github.com/michelutke/droidie/actions/workflows/ci.yml)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
 ![Swift 5.9](https://img.shields.io/badge/Swift-5.9-orange)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -39,7 +39,7 @@ brew install android-platform-tools
 **Build & install Droidie:**
 
 ```bash
-git clone https://github.com/miggiman/droidie.git
+git clone https://github.com/michelutke/droidie.git
 cd droidie
 ./scripts/make-app.sh
 cp -R dist/Droidie.app /Applications/
