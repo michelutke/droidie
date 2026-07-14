@@ -11,7 +11,7 @@ public final class AppSettings {
 
     /// Destination path on Android device for transferred files.
     public var deviceDestPath: String {
-        get { defaults.string(forKey: "deviceDestPath") ?? "/sdcard/Download" }
+        get { defaults.string(forKey: "deviceDestPath") ?? "/storage/emulated/0/Download" }
         set { defaults.set(newValue, forKey: "deviceDestPath") }
     }
 

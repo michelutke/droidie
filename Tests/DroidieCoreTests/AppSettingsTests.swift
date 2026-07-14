@@ -9,7 +9,7 @@ final class AppSettingsTests: XCTestCase {
 
     func test_defaults() {
         let s = freshSettings()
-        XCTAssertEqual(s.deviceDestPath, "/sdcard/Download")
+        XCTAssertEqual(s.deviceDestPath, "/storage/emulated/0/Download")
         XCTAssertEqual(s.macDownloadDir, NSString("~/Downloads").expandingTildeInPath)
         XCTAssertNil(s.adbPathOverride)
         XCTAssertEqual(s.rememberedWifiEndpoints, [])

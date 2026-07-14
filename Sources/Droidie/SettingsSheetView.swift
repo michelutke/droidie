@@ -14,7 +14,7 @@ struct SettingsSheetView: View {
             Text("Settings").font(.headline)
 
             Text("Device destination folder").font(.caption)
-            TextField("/sdcard/Download", text: $deviceDestPath)
+            TextField("/storage/emulated/0/Download", text: $deviceDestPath)
 
             Text("Mac download folder").font(.caption)
             TextField("~/Downloads", text: $macDownloadDir)

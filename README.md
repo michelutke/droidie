@@ -31,7 +31,7 @@ macOS menu bar app for transferring files to/from Android devices over adb — U
 
 ## Settings
 
-- Device destination folder (default `/sdcard/Download`)
+- Device destination folder (default `/storage/emulated/0/Download`)
 - Mac download folder (default `~/Downloads`)
 - adb path override (default: auto-detect homebrew/PATH)
 

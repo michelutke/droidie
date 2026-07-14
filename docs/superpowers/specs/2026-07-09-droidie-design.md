@@ -15,7 +15,7 @@ macOS menu bar app to transfer files between Mac and Android devices (primary: P
 - In-app wireless-debugging pairing (IP:port + 6-digit code).
 - Per-file transfer progress.
 - Media scan broadcast after push so media appears in Gallery/Photos.
-- Configurable default destination folder on device (default `/sdcard/Download`).
+- Configurable default destination folder on device (default `/storage/emulated/0/Download` — works on devices without an `/sdcard` symlink).
 
 ## Architecture
 
@@ -41,7 +41,7 @@ Storage: UserDefaults only (settings + remembered IPs). No DB, no daemon, no cre
 **Popover:**
 - **Device row (top):** dropdown of devices (`Pixel 8 Pro · USB`). Status dot: green=ready, yellow=unauthorized (hint "confirm on phone"), grey=offline. `+ Pair` button; `⟳ Reconnect` next to remembered-offline WiFi devices (`adb connect`).
 - **Send tab:** large drop zone. Dropped files/folders → transfer list rows: filename, size, progress bar, cancel. Done rows ✓, auto-clear ~10 s. Menu bar icon reflects overall progress.
-- **Browse tab:** breadcrumb path from `/sdcard`, folder listing via `adb shell ls -la`, multi-select, `Save to Mac` → default Mac dir (setting, default `~/Downloads`). Drops onto Browse tab push into currently viewed folder (ad-hoc destination override).
+- **Browse tab:** breadcrumb path starting at the configured device destination folder, folder listing via `adb shell ls -la`, multi-select, `Save to Mac` → default Mac dir (setting, default `~/Downloads`). Drops onto Browse tab push into currently viewed folder (ad-hoc destination override).
 - **Bottom bar:** settings, quit.
 
 **Pairing sheet:** fields for `IP:port` + 6-digit code (from phone's Wireless debugging screen) → `adb pair`, then `adb connect` to connect-port (prompt for it; mDNS auto-fill only if trivial). Save IP for reconnect.

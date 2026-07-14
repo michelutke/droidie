@@ -7,13 +7,20 @@ struct BrowseTabView: View {
     @ObservedObject var deviceStore: DeviceStore
     @ObservedObject var transferQueue: TransferQueue
 
-    @State private var path = "/sdcard"
+    @State private var path: String
     @State private var entries: [RemoteEntry] = []
     @State private var selection = Set<String>()
     @State private var loading = false
     @State private var errorText: String?
     @State private var dropActive = false
     @State private var loadGeneration = 0
+
+    init(appState: AppState, deviceStore: DeviceStore, transferQueue: TransferQueue) {
+        self.appState = appState
+        self.deviceStore = deviceStore
+        self.transferQueue = transferQueue
+        _path = State(initialValue: appState.settings.deviceDestPath)
+    }
 
     var body: some View {
         VStack(spacing: 8) {
@@ -64,7 +71,7 @@ struct BrowseTabView: View {
         .task { await load() }
         .onChange(of: deviceStore.selectedSerial) { _, _ in
             selection.removeAll()
-            path = "/sdcard"
+            path = appState.settings.deviceDestPath
             Task { await load() }
         }
     }
