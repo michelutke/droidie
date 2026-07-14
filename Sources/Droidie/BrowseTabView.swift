@@ -40,23 +40,16 @@ struct BrowseTabView: View {
             }
 
             List(entries, selection: $selection) { entry in
-                HStack {
-                    Image(systemName: entry.isDirectory ? "folder" : "doc")
-                    Text(entry.name).lineLimit(1)
-                    Spacer()
-                    if !entry.isDirectory {
-                        Text(ByteCountFormatter.string(fromByteCount: entry.size, countStyle: .file))
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-                .contentShape(Rectangle())
-                .onTapGesture(count: 2) {
-                    if entry.isDirectory {
-                        path = RemotePath.join(path, entry.name)
-                        selection.removeAll()
-                        Task { await load() }
-                    }
-                }
+                row(for: entry)
+                    // simultaneousGesture lets single clicks reach List selection;
+                    // a plain onTapGesture would swallow them.
+                    .simultaneousGesture(TapGesture(count: 2).onEnded {
+                        if entry.isDirectory {
+                            path = RemotePath.join(path, entry.name)
+                            selection.removeAll()
+                            Task { await load() }
+                        }
+                    })
             }
             .listStyle(.plain)
             .overlay { if loading { ProgressView() } }
@@ -73,6 +66,30 @@ struct BrowseTabView: View {
             selection.removeAll()
             path = appState.settings.deviceDestPath
             Task { await load() }
+        }
+    }
+
+    @ViewBuilder
+    private func row(for entry: RemoteEntry) -> some View {
+        let content = HStack {
+            Image(systemName: entry.isDirectory ? "folder" : "doc")
+            Text(entry.name).lineLimit(1)
+            Spacer()
+            if !entry.isDirectory {
+                Text(ByteCountFormatter.string(fromByteCount: entry.size, countStyle: .file))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .contentShape(Rectangle())
+
+        if !entry.isDirectory, let adbPath = appState.adbPath,
+           let serial = deviceStore.selectedDevice?.serial {
+            content.draggable(RemoteFileDrag(remotePath: RemotePath.join(path, entry.name),
+                                             fileName: entry.name,
+                                             serial: serial,
+                                             adbPath: adbPath))
+        } else {
+            content
         }
     }
 
