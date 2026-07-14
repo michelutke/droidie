@@ -48,13 +48,6 @@ struct BrowseTabView: View {
                             ? Color.accentColor.opacity(0.25)
                             : Color.clear
                     )
-                    .onTapGesture(count: 2) {
-                        if entry.isDirectory {
-                            path = RemotePath.join(path, entry.name)
-                            selection.removeAll()
-                            Task { await load() }
-                        }
-                    }
                     .onTapGesture {
                         if NSEvent.modifierFlags.contains(.command) {
                             if selection.contains(entry.name) {

@@ -157,16 +157,20 @@ public final class TransferQueue: ObservableObject {
         }
     }
 
-    /// Indexes the pushed file in MediaStore so it appears immediately in Files/Gallery apps.
-    /// Uses the MediaStore scan_file content call — `cmd media scan` and the scanner
-    /// broadcast are both gone on Android 14+. Runs for every file type: non-media files
-    /// are invisible in MediaStore-backed views (e.g. Files "Downloads") until indexed.
+    /// Post-push housekeeping: stamp the file with the current time (adb push preserves
+    /// the Mac's mtime, which buries fresh copies in date-sorted views), then index it
+    /// in MediaStore so it appears immediately in Files/Gallery apps. Uses the MediaStore
+    /// scan_file content call — `cmd media scan` and the scanner broadcast are both gone
+    /// on Android 14+. Runs for every file type: non-media files are invisible in
+    /// MediaStore-backed views (e.g. Files "Downloads") until indexed.
     private func mediaScanIfNeeded(_ job: TransferJob) async {
         guard case .push(let local, let remoteDir) = job.kind else { return }
         let remoteFile = RemotePath.join(remoteDir, local.lastPathComponent)
+        let quoted = RemotePath.quoted(remoteFile)
+        _ = try? await runner.run(["-s", job.serial, "shell", "touch", quoted], onOutput: nil)
         _ = try? await runner.run(["-s", job.serial, "shell", "content", "call",
                                    "--uri", "content://media/", "--method", "scan_file",
-                                   "--arg", RemotePath.quoted(remoteFile)],
+                                   "--arg", quoted],
                                   onOutput: nil)
     }
 

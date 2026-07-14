@@ -42,24 +42,27 @@ final class TransferQueueTests: XCTestCase {
         XCTAssertEqual(q.jobs.first?.status, .done)
     }
 
-    func test_push_mediaFile_triggersMediaStoreScan() async {
+    func test_push_touchesFileThenTriggersMediaStoreScan() async {
         let runner = FakeRunner()
         let q = TransferQueue(runner: runner)
         q.enqueuePush(files: [URL(fileURLWithPath: "/tmp/pic.jpg")], remoteDir: "/sdcard/Download", serial: "SER")
         await drainQueue(q)
-        XCTAssertEqual(runner.calls.count, 2)
-        XCTAssertEqual(runner.calls[1], ["-s", "SER", "shell", "content", "call",
+        XCTAssertEqual(runner.calls.count, 3)
+        XCTAssertEqual(runner.calls[1], ["-s", "SER", "shell", "touch",
+                                         "'/sdcard/Download/pic.jpg'"])
+        XCTAssertEqual(runner.calls[2], ["-s", "SER", "shell", "content", "call",
                                          "--uri", "content://media/", "--method", "scan_file",
                                          "--arg", "'/sdcard/Download/pic.jpg'"])
     }
 
-    func test_push_textFile_alsoTriggersMediaStoreScan() async {
+    func test_push_textFile_alsoTouchedAndScanned() async {
         let runner = FakeRunner()
         let q = TransferQueue(runner: runner)
         q.enqueuePush(files: [URL(fileURLWithPath: "/tmp/a.txt")], remoteDir: "/sdcard/Download", serial: "SER")
         await drainQueue(q)
-        XCTAssertEqual(runner.calls.count, 2)
+        XCTAssertEqual(runner.calls.count, 3)
         XCTAssertEqual(runner.calls[1].last, "'/sdcard/Download/a.txt'")
+        XCTAssertEqual(runner.calls[2].last, "'/sdcard/Download/a.txt'")
     }
 
     func test_failure_capturesStderr() async {
