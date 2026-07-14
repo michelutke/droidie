@@ -71,26 +71,40 @@ struct BrowseTabView: View {
 
     @ViewBuilder
     private func row(for entry: RemoteEntry) -> some View {
-        let content = HStack {
+        HStack {
             Image(systemName: entry.isDirectory ? "folder" : "doc")
             Text(entry.name).lineLimit(1)
             Spacer()
-            if !entry.isDirectory {
+            if entry.isDirectory {
+                Button {
+                    path = RemotePath.join(path, entry.name)
+                    selection.removeAll()
+                    Task { await load() }
+                } label: {
+                    Image(systemName: "chevron.right")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help("Open folder")
+            } else {
                 Text(ByteCountFormatter.string(fromByteCount: entry.size, countStyle: .file))
                     .font(.caption).foregroundStyle(.secondary)
+                if let adbPath = appState.adbPath,
+                   let serial = deviceStore.selectedDevice?.serial {
+                    ZStack {
+                        Image(systemName: "line.3.horizontal")
+                            .foregroundStyle(.tertiary)
+                        FileDragHandle(remotePath: RemotePath.join(path, entry.name),
+                                       fileName: entry.name,
+                                       serial: serial,
+                                       adbPath: adbPath)
+                    }
+                    .frame(width: 22, height: 18)
+                    .help("Drag to Finder")
+                }
             }
         }
         .contentShape(Rectangle())
-
-        if !entry.isDirectory, let adbPath = appState.adbPath,
-           let serial = deviceStore.selectedDevice?.serial {
-            content.draggable(RemoteFileDrag(remotePath: RemotePath.join(path, entry.name),
-                                             fileName: entry.name,
-                                             serial: serial,
-                                             adbPath: adbPath))
-        } else {
-            content
-        }
     }
 
     private func navigateUp() {
