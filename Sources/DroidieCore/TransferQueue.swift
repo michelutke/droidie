@@ -143,10 +143,11 @@ public final class TransferQueue: ObservableObject {
 
         do {
             let jobID = job.id
-            let result = try await runner.run(args) { [weak self] chunk in
+            let box = WeakBox(self)
+            let result = try await runner.run(args) { chunk in
                 guard let percent = ProgressParser.percent(in: chunk) else { return }
                 Task { @MainActor in
-                    self?.setStatus(jobID, .running(percent))
+                    box.value?.setStatus(jobID, .running(percent))
                 }
             }
             if Task.isCancelled {

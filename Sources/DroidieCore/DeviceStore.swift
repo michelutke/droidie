@@ -26,11 +26,12 @@ public final class DeviceStore: ObservableObject {
 
     /// Starts tracking devices, restarting the tracker (with adb start-server + backoff) on disconnect.
     public func start() {
-        tracker.onDevices = { [weak self] devices in
-            Task { @MainActor in self?.apply(devices: devices) }
+        let box = WeakBox(self)
+        tracker.onDevices = { devices in
+            Task { @MainActor in box.value?.apply(devices: devices) }
         }
-        tracker.onDisconnect = { [weak self] in
-            Task { @MainActor in await self?.restartTracking() }
+        tracker.onDisconnect = {
+            Task { @MainActor in await box.value?.restartTracking() }
         }
         tracker.start()
     }
