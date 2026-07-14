@@ -42,22 +42,24 @@ final class TransferQueueTests: XCTestCase {
         XCTAssertEqual(q.jobs.first?.status, .done)
     }
 
-    func test_push_mediaFile_triggersMediaScan() async {
+    func test_push_mediaFile_triggersMediaStoreScan() async {
         let runner = FakeRunner()
         let q = TransferQueue(runner: runner)
         q.enqueuePush(files: [URL(fileURLWithPath: "/tmp/pic.jpg")], remoteDir: "/sdcard/Download", serial: "SER")
         await drainQueue(q)
         XCTAssertEqual(runner.calls.count, 2)
-        XCTAssertEqual(runner.calls[1], ["-s", "SER", "shell", "cmd", "media", "scan",
-                                         "'/sdcard/Download/pic.jpg'"])
+        XCTAssertEqual(runner.calls[1], ["-s", "SER", "shell", "content", "call",
+                                         "--uri", "content://media/", "--method", "scan_file",
+                                         "--arg", "'/sdcard/Download/pic.jpg'"])
     }
 
-    func test_push_textFile_noMediaScan() async {
+    func test_push_textFile_alsoTriggersMediaStoreScan() async {
         let runner = FakeRunner()
         let q = TransferQueue(runner: runner)
         q.enqueuePush(files: [URL(fileURLWithPath: "/tmp/a.txt")], remoteDir: "/sdcard/Download", serial: "SER")
         await drainQueue(q)
-        XCTAssertEqual(runner.calls.count, 1)
+        XCTAssertEqual(runner.calls.count, 2)
+        XCTAssertEqual(runner.calls[1].last, "'/sdcard/Download/a.txt'")
     }
 
     func test_failure_capturesStderr() async {

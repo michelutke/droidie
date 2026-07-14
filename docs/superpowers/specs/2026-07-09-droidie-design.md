@@ -14,7 +14,7 @@ macOS menu bar app to transfer files between Mac and Android devices (primary: P
 - Pull files from device via simple file browser pane.
 - In-app wireless-debugging pairing (IP:port + 6-digit code).
 - Per-file transfer progress.
-- Media scan broadcast after push so media appears in Gallery/Photos.
+- MediaStore indexing after every push so files appear immediately in Files/Gallery apps.
 - Configurable default destination folder on device (default `/storage/emulated/0/Download` — works on devices without an `/sdcard` symlink).
 
 ## Architecture
@@ -54,7 +54,7 @@ Storage: UserDefaults only (settings + remembered IPs). No DB, no daemon, no cre
 
 - `adb -s <serial> push <local> <remote>/`; folder drop = one recursive push. Jobs run serially.
 - Progress from adb's `[ NN%]` stdout lines; if absent, indeterminate bar.
-- After push of media files (image/video/audio extensions): `adb shell cmd media scan <remote-path>`.
+- After every push: `adb shell content call --uri content://media/ --method scan_file --arg <remote-path>` (MediaStore scan_file — `cmd media scan` and the scanner broadcast don't exist on Android 14+).
 - Remote paths quoted; spaces/unicode-safe.
 
 ## Error handling

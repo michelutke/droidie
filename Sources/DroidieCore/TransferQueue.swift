@@ -49,12 +49,6 @@ public final class TransferQueue: ObservableObject {
     private var isProcessing = false
     private var runningTask: (id: UUID, task: Task<Void, Never>)?
 
-    private static let mediaExtensions: Set<String> = [
-        "jpg", "jpeg", "png", "gif", "heic", "heif", "webp", "avif", "dng",
-        "mp4", "mov", "mkv", "webm", "m4v",
-        "mp3", "wav", "m4a", "flac", "ogg", "opus",
-    ]
-
     /// Creates a queue that dispatches adb commands through the given runner.
     public init(runner: AdbRunning) {
         self.runner = runner
@@ -163,12 +157,16 @@ public final class TransferQueue: ObservableObject {
         }
     }
 
+    /// Indexes the pushed file in MediaStore so it appears immediately in Files/Gallery apps.
+    /// Uses the MediaStore scan_file content call — `cmd media scan` and the scanner
+    /// broadcast are both gone on Android 14+. Runs for every file type: non-media files
+    /// are invisible in MediaStore-backed views (e.g. Files "Downloads") until indexed.
     private func mediaScanIfNeeded(_ job: TransferJob) async {
-        guard case .push(let local, let remoteDir) = job.kind,
-              Self.mediaExtensions.contains(local.pathExtension.lowercased()) else { return }
+        guard case .push(let local, let remoteDir) = job.kind else { return }
         let remoteFile = RemotePath.join(remoteDir, local.lastPathComponent)
-        _ = try? await runner.run(["-s", job.serial, "shell", "cmd", "media", "scan",
-                                   RemotePath.quoted(remoteFile)],
+        _ = try? await runner.run(["-s", job.serial, "shell", "content", "call",
+                                   "--uri", "content://media/", "--method", "scan_file",
+                                   "--arg", RemotePath.quoted(remoteFile)],
                                   onOutput: nil)
     }
 
