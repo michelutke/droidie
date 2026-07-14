@@ -26,6 +26,10 @@ final class StatusItemController {
             catcher.autoresizingMask = [.width, .height]
             catcher.onClick = { [weak self] in self?.togglePopover() }
             catcher.onFiles = { [weak self] urls in self?.appState.pushToSelectedDevice(urls) ?? false }
+            catcher.onDragEntered = { [weak self] in
+                guard let self, !self.popover.isShown else { return }
+                self.togglePopover()
+            }
             button.addSubview(catcher)
         }
 

@@ -39,17 +39,33 @@ struct BrowseTabView: View {
                 Text(errorText).font(.caption).foregroundStyle(.red)
             }
 
-            List(entries, selection: $selection) { entry in
+            // Manual selection: NSTableView-backed List selection is unreliable
+            // inside an NSPopover (first click often only focuses the window).
+            List(entries) { entry in
                 row(for: entry)
-                    // simultaneousGesture lets single clicks reach List selection;
-                    // a plain onTapGesture would swallow them.
-                    .simultaneousGesture(TapGesture(count: 2).onEnded {
+                    .listRowBackground(
+                        selection.contains(entry.name)
+                            ? Color.accentColor.opacity(0.25)
+                            : Color.clear
+                    )
+                    .onTapGesture(count: 2) {
                         if entry.isDirectory {
                             path = RemotePath.join(path, entry.name)
                             selection.removeAll()
                             Task { await load() }
                         }
-                    })
+                    }
+                    .onTapGesture {
+                        if NSEvent.modifierFlags.contains(.command) {
+                            if selection.contains(entry.name) {
+                                selection.remove(entry.name)
+                            } else {
+                                selection.insert(entry.name)
+                            }
+                        } else {
+                            selection = [entry.name]
+                        }
+                    }
             }
             .listStyle(.plain)
             .overlay { if loading { ProgressView() } }
