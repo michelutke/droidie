@@ -92,18 +92,35 @@ final class RemoteFilePromiseDelegate: NSObject, NSFilePromiseProviderDelegate {
     func filePromiseProvider(_ filePromiseProvider: NSFilePromiseProvider,
                              writePromiseTo url: URL,
                              completionHandler: @escaping (Error?) -> Void) {
+        // Pull into a private temp file first, then move it into place only on success.
+        // Pulling straight to the Finder destination leaves a truncated file with the real
+        // name behind if the transfer disconnects mid-way.
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("droidie-pull-\(UUID().uuidString)")
+        let tempFile = tempDir.appendingPathComponent(fileName)
+        do {
+            try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        } catch {
+            completionHandler(error)
+            return
+        }
+
         let runner = AdbCommandRunner(adbPath: adbPath)
-        let args = ["-s", serial, "pull", remotePath, url.path]
+        let args = ["-s", serial, "pull", remotePath, tempFile.path]
         Task {
             do {
                 let result = try await runner.run(args, onOutput: nil)
                 if result.exitCode == 0 {
+                    try FileManager.default.moveItem(at: tempFile, to: url)
+                    try? FileManager.default.removeItem(at: tempDir)
                     completionHandler(nil)
                 } else {
+                    try? FileManager.default.removeItem(at: tempDir)
                     let message = result.stderr.isEmpty ? result.stdout : result.stderr
                     completionHandler(FilePromisePullError(message: message))
                 }
             } catch {
+                try? FileManager.default.removeItem(at: tempDir)
                 completionHandler(error)
             }
         }

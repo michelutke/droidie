@@ -51,13 +51,13 @@ struct SendTabView: View {
     }
 
     private func scheduleAutoClear() {
+        autoClearTask?.cancel()
         let allFinished = !transferQueue.jobs.isEmpty && transferQueue.jobs.allSatisfy {
             if case .done = $0.status { return true }
             if case .failed = $0.status { return false }  // keep failures visible
             return false
         }
         guard allFinished else { return }
-        autoClearTask?.cancel()
         autoClearTask = Task {
             try? await Task.sleep(for: .seconds(10))
             guard !Task.isCancelled else { return }

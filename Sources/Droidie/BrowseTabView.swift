@@ -133,7 +133,6 @@ struct BrowseTabView: View {
         }
         loading = true
         errorText = nil
-        defer { loading = false }
         do {
             let result = try await runner.run(["-s", serial, "shell", "ls", "-la", RemotePath.quoted(path)],
                                               onOutput: nil)
@@ -147,6 +146,7 @@ struct BrowseTabView: View {
             guard generation == loadGeneration else { return }
             errorText = error.localizedDescription
         }
+        if generation == loadGeneration { loading = false }
     }
 
     private func pullSelected() {
