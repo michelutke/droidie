@@ -6,8 +6,9 @@ swift build -c release
 
 APP=dist/Droidie.app
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/Droidie "$APP/Contents/MacOS/Droidie"
+cp assets/Droidie.icns "$APP/Contents/Resources/Droidie.icns"
 
 cat > "$APP/Contents/Info.plist" <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -22,6 +23,7 @@ cat > "$APP/Contents/Info.plist" <<'EOF'
     <key>CFBundleShortVersionString</key><string>1.0</string>
     <key>CFBundleVersion</key><string>1</string>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
+    <key>CFBundleIconFile</key><string>Droidie</string>
     <key>LSUIElement</key><true/>
     <key>NSHumanReadableCopyright</key><string></string>
 </dict>
