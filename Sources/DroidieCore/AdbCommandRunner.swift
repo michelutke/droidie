@@ -19,6 +19,19 @@ public protocol AdbRunning: Sendable {
     /// Runs adb with the given arguments, streaming stdout chunks to onOutput as they arrive.
     @discardableResult
     func run(_ args: [String], onOutput: (@Sendable (String) -> Void)?) async throws -> AdbResult
+
+    /// Runs adb with the given arguments, discarding all output. Use this for commands like
+    /// `start-server` that may fork a long-lived daemon inheriting the pipe write-ends —
+    /// capturing output for those can hang forever waiting for EOF that never comes.
+    func runDiscardingOutput(_ args: [String]) async throws -> Int32
+}
+
+extension AdbRunning {
+    /// Default implementation for fakes: just discards the result of `run`. Real usage
+    /// (`AdbCommandRunner`) overrides this with a pipe-free implementation.
+    public func runDiscardingOutput(_ args: [String]) async throws -> Int32 {
+        try await run(args, onOutput: nil).exitCode
+    }
 }
 
 /// Runs adb as a subprocess, streaming stdout and supporting cooperative cancellation.
@@ -99,6 +112,42 @@ public final class AdbCommandRunner: AdbRunning {
                     process.terminationHandler = nil
                     outPipe.fileHandleForReading.readabilityHandler = nil
                     errPipe.fileHandleForReading.readabilityHandler = nil
+                    continuation.resume(throwing: error)
+                }
+            }
+        } onCancel: {
+            launchState.cancel(process)
+        }
+    }
+
+    /// Runs adb with no pipes at all (output goes to /dev/null), so a forked daemon that
+    /// inherits the write-ends (e.g. `adb start-server`) can never cause a hang waiting for
+    /// EOF on a pipe nothing will ever close. The continuation is resumed purely from the
+    /// terminationHandler.
+    public func runDiscardingOutput(_ args: [String]) async throws -> Int32 {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: adbPath)
+        process.arguments = args
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+
+        let launchState = LaunchState()
+
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                process.terminationHandler = { proc in
+                    continuation.resume(returning: proc.terminationStatus)
+                }
+                guard launchState.beginLaunch() else {
+                    process.terminationHandler = nil
+                    continuation.resume(throwing: CancellationError())
+                    return
+                }
+                do {
+                    try process.run()
+                    launchState.endLaunch(process)
+                } catch {
+                    process.terminationHandler = nil
                     continuation.resume(throwing: error)
                 }
             }

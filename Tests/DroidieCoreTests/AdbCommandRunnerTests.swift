@@ -62,6 +62,18 @@ final class AdbCommandRunnerTests: XCTestCase {
         XCTAssertEqual(result.stdout.unicodeScalars.count, 200_001)
     }
 
+    func test_runDiscardingOutput_doesNotHangOnForkedChildInheritingPipes() async throws {
+        // Mirrors `adb start-server`: forks a child that inherits the pipe write-ends and
+        // outlives the parent, without redirecting its own output. The piped `run()` path
+        // would hang forever waiting for EOF on those pipes; runDiscardingOutput uses no
+        // pipes at all, so it must return promptly.
+        let adb = try makeFakeAdb("sleep 5 &\nexit 0")
+        let start = Date()
+        let exitCode = try await AdbCommandRunner(adbPath: adb).runDiscardingOutput(["start-server"])
+        XCTAssertEqual(exitCode, 0)
+        XCTAssertLessThan(Date().timeIntervalSince(start), 2)
+    }
+
     func test_run_preCancelledTask_doesNotCrash() async throws {
         let adb = try makeFakeAdb("sleep 5")
         let task = Task {

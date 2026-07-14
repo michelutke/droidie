@@ -76,7 +76,7 @@ public final class DeviceStore: ObservableObject {
 
     /// Restarts adb server and re-establishes device tracking after a 2s backoff.
     private func restartTracking() async {
-        _ = try? await runner.run(["start-server"], onOutput: nil)
+        _ = try? await runner.runDiscardingOutput(["start-server"])
         try? await Task.sleep(for: .seconds(2))
         tracker.start()
     }

@@ -33,7 +33,7 @@ final class AppState: ObservableObject {
     func startServices() {
         guard let runner, let deviceStore else { return }
         Task {
-            _ = try? await runner.run(["start-server"], onOutput: nil)
+            _ = try? await runner.runDiscardingOutput(["start-server"])
             deviceStore.start()
         }
     }
